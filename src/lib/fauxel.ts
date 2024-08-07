@@ -36,7 +36,7 @@ interface Sampler {
 interface FauxelOptions {
     canvasElement: HTMLCanvasElement
     drawShader: string
-    onInit?: (this: Fauxel, options: FauxelOptions) => void
+    onInit?: (this: Fauxel, options: FauxelOptions) => Promise<void>
     onUpdate: (this: Fauxel, tickNumber: number) => void
     pointsPerPixel?: number
     pointsPerSprite?: number
@@ -157,8 +157,13 @@ export class Fauxel {
             this.canvas.addEventListener('touchend', this.onUp.bind(this))
         }
 
-        options.onInit?.call(this, options)
-        this.doTick()
+        if (options.onInit) {
+            options.onInit
+                .call(this, options)
+                .then(() => this.doTick())
+        } else {
+            this.doTick()
+        }
     }
 
     // #endregion
@@ -291,10 +296,10 @@ export class Fauxel {
     // #region Graphics Methods
 
     private recreateSamplers () {
-        this.spriteTexture = this.createSampler(this.spriteTexture.imageData?.width, this.spriteTexture.imageData?.height)
+        this.spriteTexture = this.createSampler(this.spriteTexture.imageData)
     }
 
-    private createSampler (width: number = 32, height: number = 32, wrap?: boolean): Sampler {
+    private createSampler (imageData?: ImageData, wrap?: boolean): Sampler {
         // Create the framebuffer
         const attachments = [
             { format: this.gl.RGBA, type: this.gl.UNSIGNED_BYTE, min: this.gl.NEAREST, mag: this.gl.NEAREST, wrap: this.gl.CLAMP_TO_EDGE, },
@@ -304,16 +309,15 @@ export class Fauxel {
         twgl.bindFramebufferInfo(this.gl, framebufferInfo)
 
         // Create the image data
-        const buffer = document.createElement('canvas')
-        buffer.width = width
-        buffer.height = height
-        const context = buffer.getContext('2d')!
-        const grad = context.createLinearGradient(0, 0, width, height);
-        grad.addColorStop(0, 'red')
-        grad.addColorStop(1, 'blue')
-        context.fillStyle = grad
-        context.fillRect(0, 0, width, height)
-        const imageData = context.getImageData(0, 0, width, height)
+        if (!imageData) {
+            const buffer = document.createElement('canvas')
+            buffer.width = 16
+            buffer.height = 16
+            const context = buffer.getContext('2d')!
+            context.fillStyle = '#211C55'
+            context.fillRect(0, 0, 16, 16)
+            imageData = context.getImageData(0, 0, 16, 16)
+        }
 
         // Create the texture
         const texture = twgl.createTexture(this.gl, {
@@ -321,7 +325,6 @@ export class Fauxel {
             mag: this.gl.NEAREST,
             wrap: wrap ? this.gl.REPEAT : this.gl.CLAMP_TO_EDGE,
             src: imageData,
-            // flipY: 1,
         })
 
         // Return the sampler
@@ -338,6 +341,7 @@ export class Fauxel {
 
     setSpriteTexture (imageData: ImageData) {
         this.spriteTexture.imageData = imageData
+        this.recreateSamplers()
     }
 
     // #endregion

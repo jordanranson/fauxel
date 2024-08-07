@@ -142,10 +142,22 @@ void spr (float index, float x, float y) {
         gl_FragCoord.y > y && 
         gl_FragCoord.y < y + u_pointsPerSprite
     ) {
-        float u = mod(index, u_spriteTextureSize.x);
-        float v = floor(index / u_spriteTextureSize.x);
-        outColor = texture(u_spriteTexture, vec2(u / u_spriteTextureSize.x, 1.0 - (v + 1.0 / u_spriteTextureSize.y)));
-        // outColor = texture(u_spriteTexture, vec2(0.0, 1.0));
+        float spritesPerRow = u_spriteTextureSize.x / u_pointsPerSprite;
+
+        float gridX = mod(index, spritesPerRow);
+        float gridY = floor(index / spritesPerRow);
+
+        float totalRows = u_spriteTextureSize.y / u_pointsPerSprite;
+        gridY = totalRows - 1.0 - gridY;
+
+        float spriteSize = u_pointsPerSprite / u_spriteTextureSize.x;
+        float baseU = gridX * spriteSize;
+        float baseV = gridY * spriteSize;
+
+        float u = baseU + (gl_FragCoord.x - x) / u_pointsPerSprite * spriteSize;
+        float v = baseV + (gl_FragCoord.y - y) / u_pointsPerSprite * spriteSize;
+
+        outColor = texture(u_spriteTexture, vec2(u, v));
     }
 }
 
