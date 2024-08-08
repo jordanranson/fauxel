@@ -1,10 +1,6 @@
 uniform vec2 u_playerPos;
 
 void onDraw () {
-    circ(
-        u_playerPos.x, 
-        u_playerPos.y, 
-        2.0, 
-        vec4(1.0, 0.0, 0.0, 1.0)
-    );
+    float index = mod(u_tickNumber / 100.0, 4.0);
+    spr(index, u_playerPos.x - 8.0, u_playerPos.y - 8.0);
 }

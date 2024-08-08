@@ -6,7 +6,7 @@ import vertexShader from './shaders/vert.vert'
 
 // #region Constants
 
-const QUAD_VERTICES = [ -1, -1, 0, 1, -1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, 1, 1, 0 ]
+const QUAD_VERTICES = [-1, -1, 0, 1, -1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, 1, 1, 0]
 
 // #endregion
 
@@ -156,16 +156,16 @@ export class Fauxel {
         document.body.addEventListener('keydown', this.onKeydown.bind(this))
         document.body.addEventListener('keyup', this.onKeyup.bind(this))
 
-        this.canvas.addEventListener('mousemove', this.onMove.bind(this))
-        this.canvas.addEventListener('mousedown', this.onDown.bind(this))
-        this.canvas.addEventListener('mouseup', this.onUp.bind(this))
+        this.canvas.addEventListener('mousemove', this.onCursorMove.bind(this))
+        this.canvas.addEventListener('mousedown', this.onCursorDown.bind(this))
+        this.canvas.addEventListener('mouseup', this.onCursorUp.bind(this))
         this.canvas.addEventListener('click', (evt: MouseEvent) => evt.preventDefault())
         this.canvas.addEventListener('contextmenu', this.onContextMenu.bind(this))
 
         if (this.deviceHasTouchscreen) {
-            this.canvas.addEventListener('touchmove', this.onMove.bind(this))
+            this.canvas.addEventListener('touchmove', this.onCursorMove.bind(this))
             this.canvas.addEventListener('touchstart', this.onTouchStart.bind(this))
-            this.canvas.addEventListener('touchend', this.onUp.bind(this))
+            this.canvas.addEventListener('touchend', this.onCursorUp.bind(this))
         }
 
         if (options.onInit) {
@@ -253,7 +253,7 @@ export class Fauxel {
 
         // Set uniform blocks
         for (const name in this.uniformBlocks) {
-            const block = this.uniformBlocks[ name ]
+            const block = this.uniformBlocks[name]
             block.data.forEach((data) => {
                 this.gl.bufferSubData(this.gl.UNIFORM_BUFFER, block.index, data.values as Float32Array);
             })
@@ -319,7 +319,6 @@ export class Fauxel {
     }
 
     private createSampler (imageData?: ImageData, wrap?: boolean): Sampler {
-        // Create the framebuffer
         const attachments = [
             { format: this.gl.RGBA, type: this.gl.UNSIGNED_BYTE, min: this.gl.NEAREST, mag: this.gl.NEAREST, wrap: this.gl.CLAMP_TO_EDGE, },
             { format: this.gl.DEPTH_STENCIL, },
@@ -327,7 +326,6 @@ export class Fauxel {
         const framebufferInfo = twgl.createFramebufferInfo(this.gl, attachments)
         twgl.bindFramebufferInfo(this.gl, framebufferInfo)
 
-        // Create the image data
         if (!imageData) {
             const buffer = document.createElement('canvas')
             buffer.width = 16
@@ -338,7 +336,6 @@ export class Fauxel {
             imageData = context.getImageData(0, 0, 16, 16)
         }
 
-        // Create the texture
         const texture = twgl.createTexture(this.gl, {
             min: this.gl.NEAREST,
             mag: this.gl.NEAREST,
@@ -346,7 +343,6 @@ export class Fauxel {
             src: imageData,
         })
 
-        // Return the sampler
         return {
             texture,
             framebufferInfo,
@@ -355,74 +351,8 @@ export class Fauxel {
     }
 
     setUniform (name: string, value: UniformValue) {
-        this.uniforms[ name ] = value
+        this.uniforms[name] = value
     }
-
-    // createUniformBlock (name: string, values: Record<string, number[]>) {
-    //     const maxBindings = this.gl.getParameter(this.gl.MAX_UNIFORM_BUFFER_BINDINGS);
-    //     if (Object.keys(this.uniformBlocks).length >= maxBindings) {
-    //         throw new Error('Maximum number of uniform blocks exceeded.');
-    //     }
-
-    //     const bytesPerElement = Float32Array.BYTES_PER_ELEMENT;
-
-    //     let curOffset = 0
-    //     const data = Object.keys(values).map((name) => {
-    //         return {
-    //             name,
-    //             byteOffset: curOffset += bytesPerElement * values[ name ].length,
-    //             values: new Float32Array(values[ name ]),
-    //         }
-    //     })
-
-    //     const buffer = this.gl.createBuffer();
-    //     this.gl.bindBuffer(this.gl.UNIFORM_BUFFER, buffer);
-    //     this.gl.bufferData(this.gl.UNIFORM_BUFFER, curOffset, this.gl.STATIC_DRAW);
-
-    //     const program = this.programInfo.program;
-    //     const blockIndex = this.gl.getUniformBlockIndex(program, name);
-    //     const nextIndex = Object.keys(this.uniformBlocks).length;
-    //     this.gl.uniformBlockBinding(program, blockIndex, nextIndex);
-    //     this.gl.bindBufferBase(this.gl.UNIFORM_BUFFER, nextIndex, buffer);
-
-    //     this.uniformBlocks[ name ] = {
-    //         index: nextIndex,
-    //         bytesPerElement,
-    //         data,
-    //     }
-    // }
-
-    // setUniformBlock (blockName: string, values: Record<string, number[]>) {
-    //     if (!this.uniformBlocks[ blockName ]) {
-    //         throw new Error('Uniform block not found.')
-    //     }
-
-    //     this.uniformBlocks[ blockName ].data = Object.keys(values).map((name) => {
-    //         const found = this.uniformBlocks[ blockName ].data.find(b => b.name === name)
-    //         if (!found) {
-    //             throw new Error('Uniform block value not found.')
-    //         }
-
-    //         return {
-    //             name,
-    //             byteOffset: found.byteOffset,
-    //             values: new Float32Array(values[name]),
-    //         }
-    //     })
-    // }
-
-    // setUniformBlockValue (blockName: string, valueName: string, values: number[]) {
-    //     if (!this.uniformBlocks[ blockName ]) {
-    //         throw new Error('Uniform block not found.')
-    //     }
-
-    //     const found = this.uniformBlocks[ blockName ].data.find(b => b.name === valueName)
-    //     if (!found) {
-    //         throw new Error('Uniform block value not found.')
-    //     }
-
-    //     found.values = new Float32Array(values)
-    // }
 
     setSpriteTexture (imageData: ImageData) {
         this.spriteTexture.imageData = imageData
@@ -473,7 +403,7 @@ export class Fauxel {
         return this.cursorHeld === which
     }
 
-    private onMove (evt: any | MouseEvent) {
+    private onCursorMove (evt: any | MouseEvent) {
         evt.preventDefault()
 
         const w = (window.innerWidth - this.trueCanvasSize.x) / 2
@@ -493,7 +423,7 @@ export class Fauxel {
         this.cursorPosition.y = Math.round(my / this.pointsPerPixel)
     }
 
-    private onDown (evt: MouseEvent) {
+    private onCursorDown (evt: MouseEvent) {
         evt.preventDefault()
 
         const button = ('mouse_button_' + (evt.button + 1)) as CursorAction
@@ -503,7 +433,7 @@ export class Fauxel {
         this.cursorPressedThisFrame = true
     }
 
-    private onUp (evt: any | MouseEvent) {
+    private onCursorUp (evt: any | MouseEvent) {
         evt.preventDefault()
 
         this.cursorHeld = false
@@ -512,7 +442,7 @@ export class Fauxel {
     private onTouchStart (evt: any) {
         evt.preventDefault()
 
-        this.onMove(evt)
+        this.onCursorMove(evt)
 
         this.cursorHeld = CursorAction.TOUCH
         this.cursorPressed = CursorAction.TOUCH
