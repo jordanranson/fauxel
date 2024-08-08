@@ -135,6 +135,33 @@ void line (float x0, float y0, float x1, float y1, vec4 color) {
     }
 }
 
+// void tline (float x0, float y0, float x1, float y1, float mx, float my, float mdx, float mdy) {
+//     float dx = x1 - x0;
+//     float dy = y1 - y0;
+//     float length = sqrt(dx * dx + dy * dy);
+//     float stepX = dx / length;
+//     float stepY = dy / length;
+
+//     float t = 0.0;
+//     float x = x0;
+//     float y = y0;
+
+//     for (int i = 0; i < int(length); i++) {
+//         x += stepX;
+//         y += stepY;
+
+//         float u = mx / u_spriteTextureSize.x;
+//         float v = my / u_spriteTextureSize.y;
+
+//         vec4 color = texture(u_spriteTexture, vec2(u, v));
+
+//         rectFill(x, y, 1.0, 1.0, color);
+
+//         mx += mdx;
+//         my += mdy;
+//     }
+// }
+
 void spr (float index, float x, float y) {
     if (
         gl_FragCoord.x > x && 
@@ -156,6 +183,20 @@ void spr (float index, float x, float y) {
 
         float u = baseU + (gl_FragCoord.x - x) / u_pointsPerSprite * spriteSize;
         float v = baseV + (gl_FragCoord.y - y) / u_pointsPerSprite * spriteSize;
+
+        outColor = texture(u_spriteTexture, vec2(u, v));
+    }
+}
+
+void tex (float sx, float sy, float dx, float dy, float w, float h) {
+    if (
+        gl_FragCoord.x > dx && 
+        gl_FragCoord.x < dx + w && 
+        gl_FragCoord.y > dy && 
+        gl_FragCoord.y < dy + h
+    ) {
+        float u = (sx + (gl_FragCoord.x - dx)) / u_spriteTextureSize.x;
+        float v = (sy + h - (gl_FragCoord.y - dy)) / u_spriteTextureSize.y;
 
         outColor = texture(u_spriteTexture, vec2(u, v));
     }

@@ -6,7 +6,7 @@ import vertexShader from './shaders/vert.vert'
 
 // #region Constants
 
-const QUAD_VERTICES = [-1, -1, 0, 1, -1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, 1, 1, 0]
+const QUAD_VERTICES = [ -1, -1, 0, 1, -1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, 1, 1, 0 ]
 
 // #endregion
 
@@ -23,7 +23,17 @@ export const enum CursorAction {
     TOUCH = 'touch',
 }
 
-type UniformValue = number | number[] | WebGLTexture
+type UniformValue = number | number[] | number[][] | WebGLTexture
+
+interface UniformBlock {
+    index: number
+    bytesPerElement: number
+    data: {
+        byteOffset: number
+        name: string
+        values: number[] | Float32Array
+    }[]
+}
 
 type ResourceValue = Response | ImageData | AudioBuffer | string
 
@@ -77,10 +87,11 @@ export class Fauxel {
     private trueCanvasSize = { x: 0, y: 0 } // canvas brect size in pixels
     private pointsPerPixel = 5
     private pointsPerSprite = 16
-    private gl: WebGLRenderingContext
+    private gl: WebGL2RenderingContext
     private programInfo: twgl.ProgramInfo
     private bufferInfo: twgl.BufferInfo
     private uniforms: Record<string, UniformValue> = {}
+    private uniformBlocks: Record<string, UniformBlock> = {}
     private spriteTexture: Sampler = { texture: null!, framebufferInfo: null!, imageData: null! }
 
     // Keyboard Input Fields
@@ -239,6 +250,14 @@ export class Fauxel {
             u_spriteTextureSize: [this.spriteTexture.imageData.width, this.spriteTexture.imageData.height],
         }
         twgl.setUniforms(this.programInfo, uniforms)
+
+        // Set uniform blocks
+        for (const name in this.uniformBlocks) {
+            const block = this.uniformBlocks[ name ]
+            block.data.forEach((data) => {
+                this.gl.bufferSubData(this.gl.UNIFORM_BUFFER, block.index, data.values as Float32Array);
+            })
+        }
         
         // Render the scene
         twgl.setBuffersAndAttributes(this.gl, this.programInfo, this.bufferInfo)
@@ -336,8 +355,74 @@ export class Fauxel {
     }
 
     setUniform (name: string, value: UniformValue) {
-        this.uniforms['u_' + name] = value
+        this.uniforms[ name ] = value
     }
+
+    // createUniformBlock (name: string, values: Record<string, number[]>) {
+    //     const maxBindings = this.gl.getParameter(this.gl.MAX_UNIFORM_BUFFER_BINDINGS);
+    //     if (Object.keys(this.uniformBlocks).length >= maxBindings) {
+    //         throw new Error('Maximum number of uniform blocks exceeded.');
+    //     }
+
+    //     const bytesPerElement = Float32Array.BYTES_PER_ELEMENT;
+
+    //     let curOffset = 0
+    //     const data = Object.keys(values).map((name) => {
+    //         return {
+    //             name,
+    //             byteOffset: curOffset += bytesPerElement * values[ name ].length,
+    //             values: new Float32Array(values[ name ]),
+    //         }
+    //     })
+
+    //     const buffer = this.gl.createBuffer();
+    //     this.gl.bindBuffer(this.gl.UNIFORM_BUFFER, buffer);
+    //     this.gl.bufferData(this.gl.UNIFORM_BUFFER, curOffset, this.gl.STATIC_DRAW);
+
+    //     const program = this.programInfo.program;
+    //     const blockIndex = this.gl.getUniformBlockIndex(program, name);
+    //     const nextIndex = Object.keys(this.uniformBlocks).length;
+    //     this.gl.uniformBlockBinding(program, blockIndex, nextIndex);
+    //     this.gl.bindBufferBase(this.gl.UNIFORM_BUFFER, nextIndex, buffer);
+
+    //     this.uniformBlocks[ name ] = {
+    //         index: nextIndex,
+    //         bytesPerElement,
+    //         data,
+    //     }
+    // }
+
+    // setUniformBlock (blockName: string, values: Record<string, number[]>) {
+    //     if (!this.uniformBlocks[ blockName ]) {
+    //         throw new Error('Uniform block not found.')
+    //     }
+
+    //     this.uniformBlocks[ blockName ].data = Object.keys(values).map((name) => {
+    //         const found = this.uniformBlocks[ blockName ].data.find(b => b.name === name)
+    //         if (!found) {
+    //             throw new Error('Uniform block value not found.')
+    //         }
+
+    //         return {
+    //             name,
+    //             byteOffset: found.byteOffset,
+    //             values: new Float32Array(values[name]),
+    //         }
+    //     })
+    // }
+
+    // setUniformBlockValue (blockName: string, valueName: string, values: number[]) {
+    //     if (!this.uniformBlocks[ blockName ]) {
+    //         throw new Error('Uniform block not found.')
+    //     }
+
+    //     const found = this.uniformBlocks[ blockName ].data.find(b => b.name === valueName)
+    //     if (!found) {
+    //         throw new Error('Uniform block value not found.')
+    //     }
+
+    //     found.values = new Float32Array(values)
+    // }
 
     setSpriteTexture (imageData: ImageData) {
         this.spriteTexture.imageData = imageData
